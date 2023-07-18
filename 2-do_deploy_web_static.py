@@ -5,34 +5,43 @@ Fabric script for deploying an archive to web servers
 
 
 from fabric.api import env, put, run
+from datetime import datetime
 import os
 
 
-env.hosts = ['100.25.143.147', '35.153.194.199']
-env.user = 'ubuntu'
-env.key_filename = '~/.ssh/school'
+env.hosts = ['100.26.167.105', '54.160.97.33']  # <IP web-01>, <IP web-02>
+# ^ All remote commands must be executed on your both web servers
+# (using env.hosts = ['<IP web-01>', 'IP web-02'] variable in your script)
 
 
 def do_deploy(archive_path):
+    """ distributes an archive to my web servers
     """
-    Distributes an archive to the web servers
-    """
-    if not os.path.exists(archive_path):
-        return False
+    if exists(archive_path) is False:
+        return False  # Returns False if the file at archive_path doesnt exist
+    filename = archive_path.split('/')[-1]
+    # so now filename is <web_static_2021041409349.tgz>
+    no_tgz = '/data/web_static/releases/' + "{}".format(filename.split('.')[0])
+    # curr = '/data/web_static/current'
+    tmp = "/tmp/" + filename
 
     try:
-        archive_filename = os.path.basename(archive_path)
-        archive_folder = '/data/web_static/releases/' + archive_filename[:-4]
-        put(archive_path, '/tmp/')
-        run('mkdir -p {}'.format(archive_folder))
-        run('tar -xzf /tmp/{} -C {}'.format(archive_filename, archive_folder))
-        run('rm /tmp/{}'.format(archive_filename))
-        run('mv {}/web_static/* {}'.format(archive_folder, archive_folder))
-        run('rm -rf {}/web_static'.format(archive_folder))
-        run('rm -rf /data/web_static/current')
-        run('ln -s {} /data/web_static/current'.format(archive_folder))
-        print('New version deployed!')
+        put(archive_path, "/tmp/")
+        # ^ Upload the archive to the /tmp/ directory of the web server
+        run("mkdir -p {}/".format(no_tgz))
+        # Uncompress the archive to the folder /data/web_static/releases/
+        # <archive filename without extension> on the web server
+        run("tar -xzf {} -C {}/".format(tmp, no_tgz))
+        run("rm {}".format(tmp))
+        run("mv {}/web_static/* {}/".format(no_tgz, no_tgz))
+        run("rm -rf {}/web_static".format(no_tgz))
+        # ^ Delete the archive from the web server
+        run("rm -rf /data/web_static/current")
+        # Delete the symbolic link /data/web_static/current from the web server
+        run("ln -s {}/ /data/web_static/current".format(no_tgz))
+        # Create a new the symbolic link /data/web_static/current on the
+        # web server, linked to the new version of your code
+        # (/data/web_static/releases/<archive filename without extension>)
         return True
-    except Exception as e:
-        print('Deployment failed:', str(e))
+    except:
         return False
