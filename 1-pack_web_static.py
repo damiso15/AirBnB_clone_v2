@@ -4,7 +4,7 @@ Fabric script that generates a .tgz archive from the contents of a directory
 """
 
 
-from fabric.api import local
+from fabric.api import *
 from datetime import datetime
 
 
